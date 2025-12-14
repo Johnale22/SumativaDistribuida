@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DevOps AWS Project</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; background: #f4f4f4; }
+        .box { background: white; padding: 20px; border-radius: 10px; display: inline-block; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; font-size: 16px; border-radius: 5px;}
+        #res { margin-top: 20px; font-weight: bold; color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Frontend (Nginx)</h1>
+        <p>Este boton llama al backend a traves del Reverse Proxy</p>
+        <button onclick="llamarApi()">Llamar Backend</button>
+        <div id="res">Esperando...</div>
+    </div>
+    <script>
+        async function llamarApi() {
+            try {
+                // Llamamos a /api/, Nginx redirigirá esto al puerto 5000
+                const req = await fetch('/api/hola');
+                const data = await req.json();
+                document.getElementById('res').innerHTML = `${data.mensaje}<br>Atendido por contenedor: ${data.servidor}`;
+            } catch (e) {
+                document.getElementById('res').innerText = "Error conectando al backend";
+            }
+        }
+    </script>
+</body>
+</html>

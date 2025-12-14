@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # Servicio de Frontend
+  frontend:
+    build: ./frontend       # <--- OJO: Aquí decimos "Construye la carpeta local"
+    ports:
+      - "80:80"             # Entras por localhost:80
+    depends_on:
+      - backend             # Espera a que el backend arranque
+    networks:
+      - mi-red-app
+
+  # Servicio de Backend
+  backend:
+    build: ./backend        # <--- OJO: Construye la carpeta local
+    container_name: backend # Importante para que Nginx lo encuentre por este nombre
+    ports:
+      - "5000:5000"
+    networks:
+      - mi-red-app
+
+networks:
+  mi-red-app:
+    driver: bridge
