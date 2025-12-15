@@ -24,7 +24,7 @@ jobs:
           context: ./frontend
           push: true
           # CAMBIA 'tu_usuario' POR EL TUYO
-          tags: ${{ secrets.DOCKER_USERNAME }}/proyecto-front:latest
+          tags: Johnal22/proyecto-front:latest
 
       # Build Backend
       - name: Build & Push Back
@@ -33,7 +33,7 @@ jobs:
           context: ./backend
           push: true
           # CAMBIA 'tu_usuario' POR EL TUYO
-          tags: ${{ secrets.DOCKER_USERNAME }}/proyecto-back:latest
+          tags: Johnal22/proyecto-back:latest
 
   deploy-aws:
     needs: build-push
