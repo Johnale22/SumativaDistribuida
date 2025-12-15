@@ -3,14 +3,30 @@ provider "aws" {
 }
 
 # --- 1. REDES ---
-data "aws_vpc" "default" { default = true }
+data "aws_vpc" "default" {
+  default = true
+}
+
 data "aws_subnets" "default" {
-  filter { name = "vpc-id"; values = [data.aws_vpc.default.id] }
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# --- NUEVO: BUSCAR LA IMAGEN AUTOMÁTICAMENTE ---
+data "aws_ami" "amazon_linux_2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*-x86_64"]
+  }
 }
 
 # --- 2. SEGURIDAD ---
 resource "aws_security_group" "web_sg" {
-  name        = "security-group-proyecto-final-v2" # Nombre nuevo
+  name        = "security-group-proyecto-final-v4" # Cambié versión por si acaso
   description = "Permitir HTTP y SSH"
   vpc_id      = data.aws_vpc.default.id
 
@@ -36,20 +52,21 @@ resource "aws_security_group" "web_sg" {
 
 # --- 3. BALANCEADOR (ALB) ---
 resource "aws_lb" "mi_alb" {
-  name               = "alb-proyecto-final-v2"
+  name               = "alb-proyecto-final-v4"
   load_balancer_type = "application"
   security_groups    = [aws_security_group.web_sg.id]
   subnets            = data.aws_subnets.default.ids
 }
 
 resource "aws_lb_target_group" "mi_tg" {
-  name     = "tg-proyecto-final-v2"
+  name     = "tg-proyecto-final-v4"
   port     = 80
   protocol = "HTTP"
   vpc_id   = data.aws_vpc.default.id
+  
   health_check {
-    path = "/"
-    matcher = "200"
+    path     = "/"
+    matcher  = "200"
     interval = 30
   }
 }
@@ -58,13 +75,20 @@ resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.mi_alb.arn
   port              = "80"
   protocol          = "HTTP"
-  default_action { type = "forward"; target_group_arn = aws_lb_target_group.mi_tg.arn }
+  
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.mi_tg.arn
+  }
 }
 
 # --- 4. PLANTILLA EC2 (LAUNCH TEMPLATE) ---
 resource "aws_launch_template" "mi_lt" {
-  name_prefix   = "lt-proyecto-v2-"
-  image_id      = "ami-0ebfd81a33f895dd9" # Amazon Linux 2023 (US-EAST-1)
+  name_prefix   = "lt-proyecto-v4-"
+  
+  # AQUÍ ESTÁ EL CAMBIO CLAVE: Usamos el ID dinámico
+  image_id      = data.aws_ami.amazon_linux_2023.id
+  
   instance_type = "t2.micro"
 
   network_interfaces {
@@ -72,7 +96,7 @@ resource "aws_launch_template" "mi_lt" {
     security_groups             = [aws_security_group.web_sg.id]
   }
 
-  # SCRIPT CORREGIDO Y BLINDADO
+  # SCRIPT DE USUARIO (Johnal22)
   user_data = base64encode(<<-EOF
     #!/bin/bash
     exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
@@ -85,13 +109,13 @@ resource "aws_launch_template" "mi_lt" {
     systemctl enable docker
     usermod -a -G docker ec2-user
     
-    # Instalar Docker Compose via Python (Más estable)
+    # Instalar Docker Compose via Python
     pip3 install docker-compose
     
-    # Preparar carpeta con permisos correctos
+    # Preparar carpeta
     mkdir -p /app
     
-    # Crear el archivo DIRECTAMENTE con el usuario correcto (Johnal22)
+    # Crear archivo docker-compose.yml con usuario Johnal22
     cat <<EOT > /app/docker-compose.yml
     version: '3'
     services:
@@ -110,12 +134,11 @@ resource "aws_launch_template" "mi_lt" {
         restart: always
     EOT
     
-    # Corregir permisos (La clave del éxito)
+    # Corregir permisos
     chown -R ec2-user:ec2-user /app
     
     # Ejecutar
     cd /app
-    # Intentamos levantar usando la ruta completa
     /usr/local/bin/docker-compose up -d || docker-compose up -d
     
     echo "--- FIN EXITOSO ---"
@@ -126,7 +149,7 @@ resource "aws_launch_template" "mi_lt" {
 # --- 5. AUTO SCALING GROUP ---
 resource "aws_autoscaling_group" "mi_asg" {
   name                = "app-asg-produccion"
-  desired_capacity    = 1  # Empezamos con 1 para probar rápido
+  desired_capacity    = 1
   max_size            = 2
   min_size            = 1
   vpc_zone_identifier = data.aws_subnets.default.ids
@@ -144,4 +167,6 @@ resource "aws_autoscaling_group" "mi_asg" {
   }
 }
 
-output "url_web" { value = "http://${aws_lb.mi_alb.dns_name}" }
+output "url_web" {
+  value = "http://${aws_lb.mi_alb.dns_name}"
+}
