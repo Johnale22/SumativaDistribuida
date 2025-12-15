@@ -47,8 +47,8 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Refrescar ASG
+      - name: Start ASG Instance Refresh
         run: |
           aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name app-asg-produccion \
-            --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 300}'
+            --auto-scaling-group-name mi-asg-web-prod \
+            --preferences '{"MinHealthyPercentage": 90, "InstanceWarmup": 300}'

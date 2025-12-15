@@ -185,6 +185,7 @@ resource "aws_launch_template" "mi_servidor_plantilla" {
 # =========================================================================
 
 resource "aws_autoscaling_group" "mi_asg" {
+  name                = "mi-asg-web-prod"
   desired_capacity    = 4
   max_size            = 4
   min_size            = 3
